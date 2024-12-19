@@ -1,0 +1,92 @@
+_schema-version: "3.2"
+ID: ProjectInfo-Collector
+version: 0.0.1
+modules:
+- name: ProjectInfo-Collector-destination-content
+  type: com.sap.application.content
+  requires:
+  - name: ProjectInfo-Collector-destination-service
+    parameters:
+      content-target: true
+  - name: ProjectInfo-Collector_html_repo_host
+    parameters:
+      service-key:
+        name: ProjectInfo-Collector_html_repo_host-key
+  - name: uaa_ProjectInfo-Collector
+    parameters:
+      service-key:
+        name: uaa_ProjectInfo-Collector-key
+  parameters:
+    content:
+      subaccount:
+        destinations:
+        - Name: projectInfoCollectorUi_ProjectInfo_Collector_html_repo_host
+          ServiceInstanceName: ProjectInfo-Collector-html5-app-host-service
+          ServiceKeyName: ProjectInfo-Collector_html_repo_host-key
+          sap.cloud.service: projectInfoCollectorUi
+        - Authentication: OAuth2UserTokenExchange
+          Name: projectInfoCollectorUi_uaa_ProjectInfo_Collector
+          ServiceInstanceName: ProjectInfo-Collector-xsuaa-service
+          ServiceKeyName: uaa_ProjectInfo-Collector-key
+          sap.cloud.service: projectInfoCollectorUi
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+- name: ProjectInfo-Collector-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: ProjectInfo-Collector_html_repo_host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - projectInfoCollworkflowuimodule.zip
+      name: projectInfoCollworkflowuimodule
+      target-path: resources/
+- name: projectInfoCollworkflowuimodule
+  type: html5
+  path: workflow-ui-module
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: ProjectInfo-Collector-destination-service
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
+        subaccount:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          existing_destinations_policy: update
+      version: 1.0.0
+    service: destination
+    service-name: ProjectInfo-Collector-destination-service
+    service-plan: lite
+- name: ProjectInfo-Collector_html_repo_host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: ProjectInfo-Collector-html5-app-host-service
+    service-plan: app-host
+- name: uaa_ProjectInfo-Collector
+  type: org.cloudfoundry.managed-service
+  parameters:
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: ProjectInfo-Collector-xsuaa-service
+    service-plan: application
+parameters:
+  deploy_mode: html5-repo
